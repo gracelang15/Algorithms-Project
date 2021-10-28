@@ -19,5 +19,5 @@ def base_pairing(base_a, base_b):
             return 1
         else:
             return 0
-    else:
-        return "Wrong input!"
+    #else:
+        #return "Wrong input!"
