@@ -9,7 +9,7 @@ THRESHOLD = 4  # Avoid sharp turn.
 ## have some advice to this part, we could simply use a map structue to store those basic pairing pairs 
 ## and use tolowercase to preprocess the character 
 
-RNA = "GUCUACGGCCAUACC"
+sequence = "GUCUACGGCCAUACC"
 # THRESHOLD = 3 means that two bases can pair only if they are at least 3 bases away from each other.
 
 pairdict = {
@@ -19,37 +19,35 @@ pairdict = {
   'c': 'g'
 }
 ## solve the pairing problem 
-def check_pairing(k, j, sequence):
+
+## create structure used to store M(i,j) and K(i,j)
+total_bp_m = numpy.zeros(shape=(RNA_length, RNA_length))  # Matrix M in the Nussinov et al. 1980 paper
+bp_m = numpy.zeros(shape=(RNA_length, RNA_length))    # Matrix K
+bp_m.fill(-1)
+
+##currently not used 
+def check_pairing(k, j):
     if abs(j-k)>THRESHOLD:
         return pairdict.get(sequence[k].lower())==sequence[j].lower() ## actuall we could perprocess the dna
-
     return 0
 
 
-def rna_base_pairing(sequence):
+def rna_base_pairing():
     # For an RNA sequence, calculate a matrix of the maximum base pairing number
-    total_bp_m = numpy.zeros(shape=(RNA_length, RNA_length))  # Matrix M in the Nussinov et al. 1980 paper
-    bp_m = numpy.zeros(shape=(RNA_length, RNA_length))    # Matrix K
-    bp_m.fill(-1)
     # Scan through subsequences with the length from THRESHOLD + 1 to total RNA length
     for dist in range(THRESHOLD + 1, RNA_length):
         for base_start in range(0, RNA_length - dist):
             base_end = base_start + dist
-            total_bp_m, bp_m = max_bp(sequence, base_start, base_end, total_bp_m, bp_m)
-    return total_bp_m, bp_m
+            max_bp(base_start, base_end)
+    #return total_bp_m, bp_m
 
 
-def max_bp(sequence, bi, bj, total_bp_m, bp_m):
+def max_bp(bi, bj):
     # This function is used to make the matrix M(i,j) in the Nussinov et al. 1980 paper
     # bi, bj: integers, represent the Bi and Bj in the Nussinov et al. 1980 paper
     for bk in range(bi, bj):
         #bp = base_pairing(sequence[bk], sequence[bj])
-        #bp = check_pairing(bk, bj,sequence)
-        if abs(bj-bk)>THRESHOLD:
-            bp=pairdict.get(sequence[bk].lower())==sequence[bj].lower()
-        else: 
-            bp=0
-
+        bp = check_pairing(bk, bj)
         # instead of passing value, passing the index of characters inside the array, and let the fuction to judge whether they distance overpass the therold 
 
         ##print(bp)
@@ -68,22 +66,22 @@ def max_bp(sequence, bi, bj, total_bp_m, bp_m):
     if total_bp_m[bi, bj - 1] > total_bp_m[bi, bj]:  # It is better that bj does not pair with any base
         total_bp_m[bi, bj] = total_bp_m[bi, bj - 1]
         bp_m[bi, bj] = -1
-    return total_bp_m, bp_m
+    #return total_bp_m, bp_m
 
     # Press the green button in the gutter to run the script.
 
 
-def traceback(i, j, bp):
+def traceback(i, j):
     container=[]
     length=j-1
     start=i
     def tracebackstep(i, j):
         #print("call trace step ")
-        while j>i and bp[i][j]==-1:
+        while j>i and bp_m[i][j]==-1:
             j=j-1
         if i>=j:
             return
-        pairValue= int(bp[i][j])
+        pairValue= int(bp_m[i][j])
         #print("current pair is: " + str(pairValue))
         container.append((pairValue,j))
         tracebackstep(i,pairValue-1)
@@ -96,10 +94,10 @@ def traceback(i, j, bp):
 
 
 if __name__ == '__main__':
-    matrix, bp = rna_base_pairing(RNA)
-    print(matrix)
+    rna_base_pairing()
+    print(total_bp_m)
     print("\n")
-    print(bp)
-    container = traceback(0,RNA_length, bp)
+    print(bp_m)
+    container = traceback(0,RNA_length)
     print(container)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
