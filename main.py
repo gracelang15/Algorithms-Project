@@ -5,9 +5,25 @@ numpy.set_printoptions(threshold=sys.maxsize)
 
 RNA_length = 15
 THRESHOLD = 4  # Avoid sharp turn.
+## actually we could use something like len(RNA) to get RNA's length 
+## have some advice to this part, we could simply use a map structue to store those basic pairing pairs 
+## and use tolowercase to preprocess the character 
 
 RNA = "GUCUACGGCCAUACC"
 # THRESHOLD = 3 means that two bases can pair only if they are at least 3 bases away from each other.
+
+pairdict = {
+  'a': 'u',
+  'u': 'a',
+  'g': 'c',
+  'c': 'g'
+}
+## solve the pairing problem 
+def check_pairing(k, j, sequence):
+    if abs(j-k)>THRESHOLD:
+        return pairdict.get(sequence[k].lower())==sequence[j].lower() ## actuall we could perprocess the dna
+
+    return 0
 
 
 def rna_base_pairing(sequence):
@@ -27,8 +43,11 @@ def max_bp(sequence, bi, bj, total_bp_m, bp_m):
     # This function is used to make the matrix M(i,j) in the Nussinov et al. 1980 paper
     # bi, bj: integers, represent the Bi and Bj in the Nussinov et al. 1980 paper
     for bk in range(bi, bj):
-        bp = base_pairing(sequence[bk], sequence[bj])
-        print(bp)
+        #bp = base_pairing(sequence[bk], sequence[bj])
+        bp = check_pairing(bk, bj,sequence)
+        # instead of passing value, passing the index of characters inside the array, and let the fuction to judge whether they distance overpass the therold 
+
+        ##print(bp)
         if bp == 0:  # bk cannot pair with bj
             continue  # Move to the next bk
         elif (bp == 1) and \
@@ -49,9 +68,33 @@ def max_bp(sequence, bi, bj, total_bp_m, bp_m):
     # Press the green button in the gutter to run the script.
 
 
+def traceback(i, j, bp):
+    container=[]
+    length=j-1
+    start=i
+    def tracebackstep(i, j):
+        #print("call trace step ")
+        while j>i and bp[i][j]==-1:
+            j=j-1
+        if i>=j:
+            return
+        pairValue= int(bp[i][j])
+        #print("current pair is: " + str(pairValue))
+        container.append((pairValue,j))
+        tracebackstep(i,pairValue-1)
+        tracebackstep(pairValue+1,j-1)
+
+    tracebackstep(start,length)
+    #print("called")
+    return container
+
+
+
 if __name__ == '__main__':
     matrix, bp = rna_base_pairing(RNA)
     print(matrix)
     print("\n")
     print(bp)
+    container = traceback(0,RNA_length, bp)
+    print(container)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
