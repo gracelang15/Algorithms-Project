@@ -44,7 +44,12 @@ def max_bp(sequence, bi, bj, total_bp_m, bp_m):
     # bi, bj: integers, represent the Bi and Bj in the Nussinov et al. 1980 paper
     for bk in range(bi, bj):
         #bp = base_pairing(sequence[bk], sequence[bj])
-        bp = check_pairing(bk, bj,sequence)
+        #bp = check_pairing(bk, bj,sequence)
+        if abs(bj-bk)>THRESHOLD:
+            bp=pairdict.get(sequence[bk].lower())==sequence[bj].lower()
+        else: 
+            bp=0
+
         # instead of passing value, passing the index of characters inside the array, and let the fuction to judge whether they distance overpass the therold 
 
         ##print(bp)
