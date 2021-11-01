@@ -1,4 +1,5 @@
 import numpy as numpy
+import pandas as pd
 import sys
 from base_pairing import base_pairing
 numpy.set_printoptions(threshold=sys.maxsize)
@@ -9,7 +10,7 @@ THRESHOLD = 4  # Avoid sharp turn.
 ## have some advice to this part, we could simply use a map structue to store those basic pairing pairs 
 ## and use tolowercase to preprocess the character 
 
-sequence = "GUCUACGGCCAUACC"
+#sequence = "GUCUACGGCCAUACC"
 # THRESHOLD = 3 means that two bases can pair only if they are at least 3 bases away from each other.
 
 pairdict = {
@@ -21,33 +22,39 @@ pairdict = {
 ## solve the pairing problem 
 
 ## create structure used to store M(i,j) and K(i,j)
-total_bp_m = numpy.zeros(shape=(RNA_length, RNA_length))  # Matrix M in the Nussinov et al. 1980 paper
-bp_m = numpy.zeros(shape=(RNA_length, RNA_length))    # Matrix K
-bp_m.fill(-1)
+#total_bp_m = numpy.zeros(shape=(RNA_length, RNA_length))  # Matrix M in the Nussinov et al. 1980 paper
+#bp_m = numpy.zeros(shape=(RNA_length, RNA_length))    # Matrix K
+#bp_m.fill(-1)
 
 ##currently not used 
-def check_pairing(k, j):
+def check_pairing(k, j, sequence):
     if abs(j-k)>THRESHOLD:
         return pairdict.get(sequence[k].lower())==sequence[j].lower() ## actuall we could perprocess the dna
     return 0
 
 
-def rna_base_pairing():
+def rna_base_pairing(sequence):
     # For an RNA sequence, calculate a matrix of the maximum base pairing number
     # Scan through subsequences with the length from THRESHOLD + 1 to total RNA length
-    for dist in range(THRESHOLD + 1, RNA_length):
-        for base_start in range(0, RNA_length - dist):
+    total_bp_m = numpy.zeros(shape=(len(sequence), len(sequence)))  # Matrix M in the Nussinov et al. 1980 paper
+    bp_m = numpy.zeros(shape=(len(sequence), len(sequence)))  # Matrix K
+    bp_m.fill(-1)
+    for dist in range(THRESHOLD + 1, len(sequence)):
+        for base_start in range(0, len(sequence) - dist):
             base_end = base_start + dist
-            max_bp(base_start, base_end)
+            max_bp(base_start, base_end, sequence, total_bp_m, bp_m)
+    container = traceback(0, len(sequence), bp_m)
+    rna_structure = encode_output(container, sequence)
+    return rna_structure
     #return total_bp_m, bp_m
 
 
-def max_bp(bi, bj):
+def max_bp(bi, bj, sequence, total_bp_m, bp_m):
     # This function is used to make the matrix M(i,j) in the Nussinov et al. 1980 paper
     # bi, bj: integers, represent the Bi and Bj in the Nussinov et al. 1980 paper
     for bk in range(bi, bj):
         #bp = base_pairing(sequence[bk], sequence[bj])
-        bp = check_pairing(bk, bj)
+        bp = check_pairing(bk, bj, sequence)
         # instead of passing value, passing the index of characters inside the array, and let the fuction to judge whether they distance overpass the therold 
 
         ##print(bp)
@@ -67,11 +74,10 @@ def max_bp(bi, bj):
         total_bp_m[bi, bj] = total_bp_m[bi, bj - 1]
         bp_m[bi, bj] = -1
     #return total_bp_m, bp_m
-
     # Press the green button in the gutter to run the script.
 
 
-def traceback(i, j):
+def traceback(i, j, bp_m):
     container=[]
     length=j-1
     start=i
@@ -91,8 +97,8 @@ def traceback(i, j):
     #print("called")
     return container
 
-def encode_output(container, RNA_length):
-    rna_structure = ["."] * RNA_length
+def encode_output(container, sequence):
+    rna_structure = ["."] * len(sequence)
     for pair in container:
         rna_structure[pair[0]] = "("
         rna_structure[pair[1]] = ")"
@@ -101,12 +107,7 @@ def encode_output(container, RNA_length):
 
 
 if __name__ == '__main__':
-    rna_base_pairing()
-    print(total_bp_m)
-    print("\n")
-    print(bp_m)
-    container = traceback(0,RNA_length)
-    print(container)
-    rna_structure = encode_output(container, RNA_length)
-    print(rna_structure)
+    rna_data = pd.read_excel("./RNAData.xlsx")
+    rna_data["Calculated Structure"] = rna_data["RNA_sequence"].apply(lambda x: rna_base_pairing(x))
+    print(rna_data["Calculated Structure"])
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
