@@ -91,6 +91,13 @@ def traceback(i, j):
     #print("called")
     return container
 
+def encode_output(container, RNA_length):
+    rna_structure = ["."] * RNA_length
+    for pair in container:
+        rna_structure[pair[0]] = "("
+        rna_structure[pair[1]] = ")"
+    rna_structure = ''.join(rna_structure)
+    return rna_structure
 
 
 if __name__ == '__main__':
@@ -100,4 +107,6 @@ if __name__ == '__main__':
     print(bp_m)
     container = traceback(0,RNA_length)
     print(container)
+    rna_structure = encode_output(container, RNA_length)
+    print(rna_structure)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
