@@ -4,8 +4,8 @@ import sys
 from base_pairing import base_pairing
 numpy.set_printoptions(threshold=sys.maxsize)
 
-RNA_length = 15
-THRESHOLD = 4  # Avoid sharp turn.
+#RNA_length = 15
+THRESHOLD = 3  # Avoid sharp turn.
 ## actually we could use something like len(RNA) to get RNA's length 
 ## have some advice to this part, we could simply use a map structue to store those basic pairing pairs 
 ## and use tolowercase to preprocess the character 
