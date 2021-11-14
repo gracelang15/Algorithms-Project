@@ -109,22 +109,34 @@ def convert_input(rna_true_structure):
     pair_index = list(zip(first_pair_element, second_pair_element))
     return pair_index
 
-#not yet used (start of RBP calculation)
-def calculate_distances(rna_true_structure, rna_predicted_structure):
-    structure_distance = []
-    for pair in rna_predicted_structure:
-        pair_distances = []
-        for true_pair in rna_true_structure:
-            pair_distances.append(max(pair[0]-true_pair[0], pair[1]-true_pair[1]))
-        structure_distance.append(min(pair_distances))
-
-
+def calculate_distances(rna_true_pairing, rna_predicted_pairing):
+    s1 = []
+    s2 = []
+    for pair1 in rna_predicted_pairing:
+        # print(pair1)
+        pair1_distances = []
+        for true_pair in rna_true_pairing:
+            pair1_distances.append(max(abs(pair1[0] - true_pair[0]), abs(pair1[1] - true_pair[1])))
+        s1.append(min(pair1_distances))
+    for pair2 in rna_true_pairing:
+        pair2_distances = []
+        for pred_pair in rna_predicted_pairing:
+            pair2_distances.append(max(abs(pair2[0] - pred_pair[0]), abs(pair2[1] - pred_pair[1])))
+        s2.append(min(pair2_distances))
+    delta = s2 + s1
+    delta.sort()
+    delta = delta[::-1]
+    return delta
 
 if __name__ == '__main__':
     rna_data = pd.read_excel("./RNAData.xlsx")
+    #use line below when wanting to do a quick test on one row of data
+    #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D", sheet_name=1)
     rna_data["RNA_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: rna_base_pairing(x))
     rna_data["RNA_predicted_structure"] = rna_data.apply(lambda x: encode_output(x.RNA_base_pairing, x.RNA_sequence),
                                                          axis=1)
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: convert_input(x))
+    rna_data["RNA_distances"] = rna_data.apply(lambda x: calculate_distances(x.RNA_true_base_pairing, x.RNA_base_pairing),
+                                                         axis=1)
     print(rna_data)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
