@@ -128,6 +128,13 @@ def calculate_distances(rna_true_pairing, rna_predicted_pairing):
     delta = delta[::-1]
     return delta
 
+def calculate_RBP_score(t, rna_distances):
+    m=0
+    delta = rna_distances[m+1]
+    while delta > t*m:
+        m=m+1
+    return m
+
 if __name__ == '__main__':
     rna_data = pd.read_excel("./RNAData.xlsx")
     #use line below when wanting to do a quick test on one row of data
@@ -138,5 +145,8 @@ if __name__ == '__main__':
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: convert_input(x))
     rna_data["RNA_distances"] = rna_data.apply(lambda x: calculate_distances(x.RNA_true_base_pairing, x.RNA_base_pairing),
                                                          axis=1)
+    rna_data["RBP_score"] = rna_data.apply(
+        lambda x: calculate_RBP_score(1, x.RNA_distances),
+        axis=1)
     print(rna_data)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
