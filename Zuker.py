@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 
 
-sequence = "GUCUACGGCCAUACC"
+sequence = "GUCUACGGCCAGAAA"
 
 THRESHOLD = 3  # Avoid sharp turn.
 GAS_CONSTANT = 1.9872e-3
@@ -216,12 +216,18 @@ def zuker(sequence):
 def min_energy(bi, bj, sequence, v_energy, w_energy):
     # Calculate matrix V
     def v_cal(i, j, seq, v, w):
-        if not check_pairing(i, j, seq):
-            return float('inf')
+        if not check_pairing(i, j, seq):  # i and j do not base pair
+            # For energy, return inf
+            # For type, return inf as "do not pair"
+            return float('inf'), float('inf')
         else:
-            energy_1 = fh(i, j, sequence)  # E1 in the Zuker et al. 1981 paper
+            # Calculate E1 for hairpin loop in the Zuker et al. 1981 paper.
+            # If a hairpin loop has the smallest free energy,
+            # record that there is no more base pairs between i and j.
+            energy_1 = fh(i, j, sequence)
 
             # Calculate E2
+            # If E2 is the smallest, record that some ii pairs with jj between i and j.
             energy_2 = float('inf')  # Initialize E2
             for ii in range(i + 1, j - 1):
                 for jj in range(ii + 1, j):
@@ -229,15 +235,35 @@ def min_energy(bi, bj, sequence, v_energy, w_energy):
                         energy_2_temp = fl(i, j, ii, jj, sequence) + v[ii, jj]
                         if energy_2 > energy_2_temp:
                             energy_2 = energy_2_temp
+                            # turn [ii,jj] into an 1-D integer. pos_2 > 0
+                            pos_2 = ii * len(sequence) + jj
 
             # Calculate E3
+            # If E3 is the smallest, no further base pairs can be confirmed.
+            # Record the internal position ii
             energy_3 = float('inf')  # Initialize E3
             for ii in range(i + 2, j - 2):
                 if energy_3 > w[i + 1, ii] + w[ii + 1, j - 1]:
                     energy_3 = w[i + 1, ii] + w[ii + 1, j - 1]
-            return min(energy_1, energy_2, energy_3)
+                    pos_3 = -ii  # ii > 0, and -ii < 0
 
-    v_energy[bi, bj] = v_cal(bi, bj, sequence, v_energy, w_energy)
+            v_cache = [energy_1, energy_2, energy_3]
+            v_min = min(v_cache)
+            """ v_min:
+                0: E1, v_type := 0, hairpin loop: no more base pairs. Finish
+                1: E2, v_type := pos_2 = ii * len(sequence) + jj > 0
+                    The next base pair is at ii--jj, and then go check v[ii, jj]. 
+                2: E3, v_type := pos_3 = -ii < 0
+                    An internal point for further w search. 
+            """
+            v_type = v_cache.index(v_min)
+            if v_type == 2:  # E3
+                v_type = pos_3
+            elif v_type == 1:  # E2
+                v_type = pos_2
+
+            return v_min, v_type
+            #return v_type
 
     # Calculate matrix W
     def w_cal(i, j, seq, v, w):
@@ -246,11 +272,46 @@ def min_energy(bi, bj, sequence, v_energy, w_energy):
         for ii in range(i + 1, j - 1):
             if energy_4 > w[i, ii] + w[ii + 1, j]:
                 energy_4 = w[i, ii] + w[ii + 1, j]
-        return min(w[i + 1, j], w[i, j - 1], v[i, j], energy_4)
+                pos = ii
 
-    w_energy[bi, bj] = w_cal(bi, bj, sequence, v_energy, w_energy)
+        w_cache = [w[i + 1, j], w[i, j - 1], v[i, j], energy_4]
+        w_min = min(w_cache)  # Find the smallest w energy
+        """
+        For recording the w energy info, we define:
+        -1: w[i, j] = w[i + 1, j]
+        -2: w[i, j] = w[i, j - 1]
+        -3: w[i, j] = v[i, j], and i--j pair. Then go check:
+            -v[i, j] = E1: hairpin loop: no more base pairs. Finish
+            -v[i, j] = E2: the next base pair is at ii--jj, and then go check v[ii, jj]
+            -v[i, j] = E3: a internal point for further w search
+        ii: w[i, j] = E4 and record where the internal point point ii is.
+        
+        This info is recorded in the other half of the w_energy matrix
+        """
+        w_pos = -w_cache.index(w_min) - 1  # Which type of energy is the smallest?
+        if w_pos == -4:
+            w_pos = pos
+
+        return w_min, w_pos
+
+    # Save the energy and the corresponding info at the opposite positions of the matrix
+    #v_energy[bi, bj] = v_cal(bi, bj, sequence, v_energy, w_energy)
+    (v_energy[bi, bj], v_energy[bj, bi]) = v_cal(bi, bj, sequence, v_energy, w_energy)
+    (w_energy[bi, bj], w_energy[bj, bi]) = w_cal(bi, bj, sequence, v_energy, w_energy)
 
     return v_energy, w_energy
+
+
+def trackback_z(i, j, v, w):
+    """
+    Arguments:
+    :param i: start
+    :param j: end
+    :param v: matrix V
+    :param w: matrix W
+    :return:
+    """
+
 
 if __name__ == '__main__':
     print(zuker(sequence))
