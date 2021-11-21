@@ -1,7 +1,6 @@
 import numpy as numpy
 import pandas as pd
 import sys
-from base_pairing import base_pairing
 numpy.set_printoptions(threshold=sys.maxsize)
 
 #RNA_length = 15
@@ -10,7 +9,7 @@ THRESHOLD = 3  # Avoid sharp turn.
 ## have some advice to this part, we could simply use a map structue to store those basic pairing pairs 
 ## and use tolowercase to preprocess the character 
 
-#sequence = "GUCUACGGCCAUACC"
+#sequence = "GUCUACGGCCAGAAA"
 # THRESHOLD = 3 means that two bases can pair only if they are at least 3 bases away from each other.
 
 pairdict = {
