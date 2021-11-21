@@ -1,6 +1,7 @@
 import numpy as numpy
 import math as math
-import pandas as pd
+import scoring as sc
+import formating as fo
 import sys
 
 
@@ -10,7 +11,7 @@ THRESHOLD = 3  # Avoid sharp turn.
 GAS_CONSTANT = 1.9872e-3
 TEMP = 310.15  # Body temperature
 
-pairdict = {
+pairdict = {  # Base pairing rules
     'a': 'u',
     'u': 'a',
     'g': 'c',
@@ -21,21 +22,19 @@ Theoretically in this algorithm, GU pair is also allowed if it is not a terminal
 Here to simplify we ignore this case.
 '''
 
-# solve the pairing problem
 
-
+# Base pairing judgement
 def check_pairing(k, j, sequence):
-    if abs(j-k) > THRESHOLD:
+    if abs(j - k) > THRESHOLD:
         return pairdict.get(sequence[k].lower()) == sequence[j].lower()  # actuall we could perprocess the dna
     return 0
 
 
 def fh(i, j, sequence):  # Hairpin loop free energy
-    # sequence[i] and sequence[j] must base-pair with each other, otherwise this function should not be called
-    # if abs(j-i) <= THRESHOLD:
-    #    return float('inf')  # If the hairpin loop has fewer than four exterior edges, then E = inf.
+    # sequence[i] and sequence[j] must base pair with each other, otherwise this function should not be called
+
     """
-    Hairpin loop energy number from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
+    Hairpin loop energy from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
     Evolutionary Implications".
 
     For energy of loops longer than 10, modified extrapolation equation from
@@ -51,6 +50,8 @@ def fh(i, j, sequence):  # Hairpin loop free energy
     hg = {
         1: float('inf'),
         2: float('inf'),
+        # These two lines are equivalent to the thresholding process, prohibiting hairpin loops with less than 3 nt
+        # in the loop
         3: 8.40,
         4: 5.90,
         5: 4.10,
@@ -65,6 +66,8 @@ def fh(i, j, sequence):  # Hairpin loop free energy
     ha = {
         1: float('inf'),
         2: float('inf'),
+        # These two lines are equivalent to the thresholding process, prohibiting hairpin loops with less than 3 nt
+        # in the loop
         3: 8.00,
         4: 7.50,
         5: 6.90,
@@ -76,19 +79,24 @@ def fh(i, j, sequence):  # Hairpin loop free energy
     }
 
     if sequence[i].lower() == 'g' or sequence[i].lower() == 'c':
-        if abs(j-i-1) > 10:  # Loop longer than 10 nt
-            return float(hg.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j-i-1)/10)
+        if abs(j - i - 1) > 10:  # Loop longer than 10 nt: extrapolation
+            return float(hg.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j - i - 1) / 10)
         else:
-            return float(hg.get(j-i-1))
+            return float(hg.get(j - i - 1))
     else:
-        if abs(j-i-1) > 10:  # Loop longer than 10 nt
-            return float(ha.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j-i-1)/10)
+        if abs(j - i - 1) > 10:  # Loop longer than 10 nt: extrapolation
+            return float(ha.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j - i - 1) / 10)
         else:
-            return float(ha.get(j-i-1))
+            return float(ha.get(j - i - 1))
 
 
 def stacking(i, ii, sequence):
-    # Call this function only if i < ii < jj < j and i pairs with j and ii pairs with jj
+    """
+        Calculating the free energy of two continuous base pairs.
+        Call this function only if i < ii < jj < j and i pairs with j and ii pairs with jj
+        Stacking energy from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
+        Evolutionary Implications".
+    """
     fs = {
         'aa': -1.2,
         'ac': -2.1,
@@ -113,13 +121,13 @@ def stacking(i, ii, sequence):
 
 def bulge(i, j, sequence):  # Make sure that j > i
     """
-       Bulge loop energy number from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
+       Bulge loop energy from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
        Evolutionary Implications".
        For energy of loops longer than 10, modified extrapolation equation from
        https://github.com/Lattice-Automation/seqfold/blob/master/seqfold/fold.py
        to fit the numbers in Salser (1978).
        See Jacobson and Stockmayer (2004), SantaLucia and Hicks (2004) for more information.
-       """
+    """
     b = {
         1: 2.80,
         2: 3.90,
@@ -132,23 +140,33 @@ def bulge(i, j, sequence):  # Make sure that j > i
         9: 5.69,
         10: 5.78
     }
-    if abs(j-i-1) > 10:  # Loop longer than 10 nt
-        energy = float(b.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j-i-1)/10)
+    if abs(j - i - 1) > 10:  # Loop longer than 10 nt: extrapolation
+        energy = float(b.get(10)) + 1.31 * GAS_CONSTANT * TEMP * math.log((j - i - 1) / 10)
     else:
-        energy = float(b.get(j-i-1))
+        energy = float(b.get(j - i - 1))
     energy = energy + stacking(i, j, sequence)  # Including the stacking energy
     return energy
 
 
 def int_loop(i, j, sequence):  # Interior loops: j-i>1
+    """
+       Interior loop energy from Salser (1978). "Globin mRNA Sequences: Analysis of Base Pairing and
+       Evolutionary Implications".
+       For energy of loops longer than 10, modified extrapolation equation from
+       https://github.com/Lattice-Automation/seqfold/blob/master/seqfold/fold.py
+       to fit the numbers in Salser (1978).
+       See Jacobson and Stockmayer (2004), SantaLucia and Hicks (2004) for more information.
+    """
     il = numpy.array([[0.10, 0.90, 1.60, 2.10, 2.50, 2.62, 2.72, 2.82, 2.90],
                       [0.95, 1.75, 2.45, 2.95, 3.35, 3.47, 3.57, 3.67, 3.75],
                       [1.80, 2.60, 3.30, 3.80, 4.20, 4.32, 4.42, 4.51, 4.60]])
-    '''
-    Line 0: energy when both stems on two sides of the interior loop are closed by GC pairs
-    Line 1: by one GC and one AU pair
-    Line 2: by both AU pairs
-    '''
+
+    """ 
+        Line 0: energy when both stems on two sides of the interior loop are closed by GC pairs
+        Line 1: by one GC and one AU pair
+        Line 2: by both AU pairs
+    """
+
     il_closure = {  # Judging the base pairs on the two sides and choose the correct line
         'aa': 2,
         'ac': 1,
@@ -169,10 +187,10 @@ def int_loop(i, j, sequence):  # Interior loops: j-i>1
     }
     line = il_closure.get(''.join([sequence[i].lower(), sequence[j].lower()]))
 
-    if abs(j-i-1) > 10:  # Loop longer than 10 nt
-        return il[line, 8] + 1.31 * GAS_CONSTANT * TEMP * math.log((j-i-1)/10)
+    if abs(j - i - 1) > 10:  # Loop longer than 10 nt: extrapolation
+        return il[line, 8] + 1.31 * GAS_CONSTANT * TEMP * math.log((j - i - 1) / 10)
     else:
-        return il[line, j-i-1-2]
+        return il[line, j - i - 1 - 2]
 
 
 def fl(i, j, ii, jj, sequence):
@@ -186,12 +204,12 @@ def fl(i, j, ii, jj, sequence):
     3. interior loop, where ii>i+1 and jj<j-1
     """
 
-    if (ii == i+1) and (jj == j-1):  # Stacking region
+    if (ii == i + 1) and (jj == j - 1):  # Stacking region
         return stacking(i, ii, sequence)
-    elif (ii > i+1) and (jj < j-1):  # two interior loops: i--ii, jj--j
+    elif (ii > i + 1) and (jj < j - 1):  # two interior loops: i--ii, jj--j
         return int_loop(i, ii, sequence) + int_loop(jj, j, sequence)
     else:  # either ii=i+1 or jj=j+1: bulge loop
-        if ii == i+1:
+        if ii == i + 1:
             return bulge(jj, j, sequence)
         else:
             return bulge(i, ii, sequence)
@@ -205,12 +223,12 @@ def zuker(sequence):
     for dist in range(THRESHOLD + 1, len(sequence)):
         for base_start in range(0, len(sequence) - dist):
             base_end = base_start + dist
-            (v_energy, w_energy) = min_energy(base_start, base_end, sequence, v_energy, w_energy)
+            (v_energy, w_energy) = min_energy(base_start, base_end, sequence, v_energy, w_energy)  # Get matrices v, w
 
-    #container = traceback(0, len(sequence), bp_m)
-    #rna_structure = encode_output(container, sequence)
-    #return rna_structure
-    return v_energy, w_energy
+    container = traceback_z(0, len(sequence), v_energy, w_energy)  # Get the base pairs
+    rna_structure = fo.encode_output(container, sequence)  # Get the dot-bracket structure
+    return rna_structure
+    # return v_energy, w_energy
 
 
 def min_energy(bi, bj, sequence, v_energy, w_energy):
@@ -263,10 +281,10 @@ def min_energy(bi, bj, sequence, v_energy, w_energy):
                 v_type = pos_2
 
             return v_min, v_type
-            #return v_type
+            # return v_type
 
     # Calculate matrix W
-    def w_cal(i, j, seq, v, w):
+    def w_cal(i, j, v, w):
         # Calculate E4
         energy_4 = float('inf')  # Initialize E4
         for ii in range(i + 1, j - 1):
@@ -281,9 +299,9 @@ def min_energy(bi, bj, sequence, v_energy, w_energy):
         -1: w[i, j] = w[i + 1, j]
         -2: w[i, j] = w[i, j - 1]
         -3: w[i, j] = v[i, j], and i--j pair. Then go check:
-            -v[i, j] = E1: hairpin loop: no more base pairs. Finish
-            -v[i, j] = E2: the next base pair is at ii--jj, and then go check v[ii, jj]
-            -v[i, j] = E3: a internal point for further w search
+            --v[i, j] = E1: hairpin loop: no more base pairs. Finish
+            --v[i, j] = E2: the next base pair is at ii--jj, and then go check v[ii, jj]
+            --v[i, j] = E3: a internal point for further w search
         ii: w[i, j] = E4 and record where the internal point point ii is.
         
         This info is recorded in the other half of the w_energy matrix
@@ -295,23 +313,60 @@ def min_energy(bi, bj, sequence, v_energy, w_energy):
         return w_min, w_pos
 
     # Save the energy and the corresponding info at the opposite positions of the matrix
-    #v_energy[bi, bj] = v_cal(bi, bj, sequence, v_energy, w_energy)
+    # v_energy[bi, bj] = v_cal(bi, bj, sequence, v_energy, w_energy)
     (v_energy[bi, bj], v_energy[bj, bi]) = v_cal(bi, bj, sequence, v_energy, w_energy)
-    (w_energy[bi, bj], w_energy[bj, bi]) = w_cal(bi, bj, sequence, v_energy, w_energy)
+    (w_energy[bi, bj], w_energy[bj, bi]) = w_cal(bi, bj, v_energy, w_energy)
 
     return v_energy, w_energy
 
 
-def trackback_z(i, j, v, w):
+def traceback_z(i, j, v, w):
     """
+    traceback function for getting the base pair information
     Arguments:
     :param i: start
-    :param j: end
+    :param j: the length of the sequence
     :param v: matrix V
     :param w: matrix W
-    :return:
+    :return: the container with (i,j) pairs
     """
+    container = []
+    LENGTH = j
 
+    def tracebackstep_v(i, j, v):
+        # print("tracebackstep_v Current i j: " + str(i) + "," + str(j))
+        if v[j, i] == 0:
+            return
+        elif v[j, i] < 0:
+            tracebackstep_w(i + 1, -int(v[j, i]))
+            tracebackstep_w(-int(v[j, i]) + 1, j - 1)
+        else:
+            container.append((int(v[j, i] // LENGTH), int(v[j, i] % LENGTH)))
+            tracebackstep_v(int(v[j, i] // LENGTH), int(v[j, i] % LENGTH), v)
+
+    def tracebackstep_w(i, j):
+        # print("tracebackstep_w Current i j: " + str(i) + "," + str(j))
+        if w[j, i] == 0:
+            return  # w[j, i] == 0 means the j-i < = THRESHOLD + 1, cannot form a structure
+        elif w[j, i] == -1:
+            tracebackstep_w(i + 1, j)
+        elif w[j, i] == -2:
+            tracebackstep_w(i, j - 1)
+        elif w[j, i] == -3:
+            container.append((i, j))  # w[i,j] == v[i,j] means that i and j base pair
+            tracebackstep_v(i, j, v)
+            return
+        else:
+            tracebackstep_w(i, int(w[j, i]))
+            tracebackstep_w(int(w[j, i]) + 1, j)
+
+    tracebackstep_w(i, j-1)
+    return container
 
 if __name__ == '__main__':
+    # (v_test, w_test) = zuker(sequence)
+    # print(v_test)
+    # print(w_test)
+    # bps = traceback_z(0, len(sequence), v_test, w_test)
+    # print(bps)
     print(zuker(sequence))
