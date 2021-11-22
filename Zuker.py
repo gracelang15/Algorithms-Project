@@ -5,7 +5,8 @@ import formating as fo
 import sys
 
 
-sequence = "GUCUACGGCCAGAAA"
+# sequence = "GUCUACGGCCAGAAA"
+sequence = "GUCUACGGCCAGAAAGUAUAAAUUCGCGCCGGGGCUA"
 
 THRESHOLD = 3  # Avoid sharp turn.
 GAS_CONSTANT = 1.9872e-3
