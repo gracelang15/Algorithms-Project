@@ -3,9 +3,11 @@ import math as math
 import scoring as sc
 import formating as fo
 import sys
+import pandas as pd
+#from main import convert_input, rna_base_pairing, encode_output, calculate_distances, calculate_RBP_score
 
 
-sequence = "GUCUACGGCCAGAAA"
+#sequence = "GUCUACGGCCAGAAA"
 
 THRESHOLD = 3  # Avoid sharp turn.
 GAS_CONSTANT = 1.9872e-3
@@ -226,8 +228,8 @@ def zuker(sequence):
             (v_energy, w_energy) = min_energy(base_start, base_end, sequence, v_energy, w_energy)  # Get matrices v, w
 
     container = traceback_z(0, len(sequence), v_energy, w_energy)  # Get the base pairs
-    rna_structure = fo.encode_output(container, sequence)  # Get the dot-bracket structure
-    return rna_structure
+    #rna_structure = fo.encode_output(container, sequence)  # Get the dot-bracket structure
+    return container
     # return v_energy, w_energy
 
 
@@ -364,9 +366,25 @@ def traceback_z(i, j, v, w):
     return container
 
 if __name__ == '__main__':
-    # (v_test, w_test) = zuker(sequence)
-    # print(v_test)
-    # print(w_test)
-    # bps = traceback_z(0, len(sequence), v_test, w_test)
-    # print(bps)
-    print(zuker(sequence))
+    #use below line for testing with one row of data
+    rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D")
+    print(rna_data)
+    #rna_data = pd.read_excel("./RNAData.xlsx")
+    rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: fo.convert_input(x))
+    print('done rna true base pairing')
+    rna_data["RNA_predicted_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: zuker(x))
+    print('done rna predict base pairing')
+    rna_data["RNA_predicted_structure"] = rna_data.apply(
+        lambda x: fo.encode_output(x.RNA_predicted_base_pairing, x.RNA_sequence),
+        axis=1)
+    print('done rna predicted structure')
+    rna_data["RNA_distances"] = rna_data.apply(
+        lambda x: sc.calculate_distances(x.RNA_true_base_pairing, x.RNA_predicted_base_pairing),
+        axis=1)
+    print('done rna distances')
+    rna_data["RBP_score"] = rna_data.apply(
+       lambda x: sc.calculate_RBP_score(1, x.RNA_distances), axis=1)
+    print('done rna rbp score')
+    print(rna_data)
+    rna_data.to_excel("results_zuker2.xlsx", sheet_name="zuker")
+

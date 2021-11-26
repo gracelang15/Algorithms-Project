@@ -19,8 +19,14 @@ def calculate_distances(rna_true_pairing, rna_predicted_pairing):
 
 
 def calculate_RBP_score(t, rna_distances):
-    m=0
-    delta = rna_distances[m+1]
-    while delta > t*m:
-        m=m+1
-    return m
+    #check if there are no cases where delta <= t*m:
+    if rna_distances[-1] > (len(rna_distances)-1)*t:
+        print("found_case")
+        return len(rna_distances)-1
+    else:
+        m=0
+        delta = rna_distances[m]
+        while delta > t*m:
+            m=m+1
+            delta = rna_distances[m]
+        return m
