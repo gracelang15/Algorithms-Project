@@ -1,6 +1,7 @@
 import numpy as numpy
 import pandas as pd
 import sys
+import formating as fo
 numpy.set_printoptions(threshold=sys.maxsize)
 
 #RNA_length = 15
@@ -25,7 +26,9 @@ pairdict = {
 #bp_m = numpy.zeros(shape=(RNA_length, RNA_length))    # Matrix K
 #bp_m.fill(-1)
 
-##currently not used 
+##currently not used
+
+
 def check_pairing(k, j, sequence):
     if abs(j-k)>THRESHOLD:
         return pairdict.get(sequence[k].lower())==sequence[j].lower() ## actuall we could perprocess the dna
@@ -45,6 +48,7 @@ def rna_base_pairing(sequence):
     container = traceback(0, len(sequence), bp_m)
     #rna_structure = encode_output(container, sequence)
     return container
+
 
 def max_bp(bi, bj, sequence, total_bp_m, bp_m):
     # This function is used to make the matrix M(i,j) in the Nussinov et al. 1980 paper
@@ -89,24 +93,6 @@ def traceback(i, j, bp_m):
     tracebackstep(start,length)
     return container
 
-def encode_output(container, sequence):
-    rna_structure = ["."] * len(sequence)
-    for pair in container:
-        rna_structure[pair[0]] = "("
-        rna_structure[pair[1]] = ")"
-    rna_structure = ''.join(rna_structure)
-    return rna_structure
-
-def convert_input(rna_true_structure):
-    first_pair_element = []
-    second_pair_element = []
-    for i in range(len(rna_true_structure)):
-        if rna_true_structure[i] == "(":
-            first_pair_element.append(i)
-        if rna_true_structure[-i-1] == ")":
-            second_pair_element.append(len(rna_true_structure)+(-1-i))
-    pair_index = list(zip(first_pair_element, second_pair_element))
-    return pair_index
 
 def calculate_distances(rna_true_pairing, rna_predicted_pairing):
     s1 = []
@@ -141,12 +127,12 @@ def calculate_RBP_score(t, rna_distances):
         return m
 
 if __name__ == '__main__':
-    rna_data = pd.read_excel("./RNAData.xlsx")
+    rna_data = pd.read_excel("D:/Courses/CS5112_Algorithm/data/RNAData_10-410.xlsx")
     #use line below when wanting to do a quick test on one row of data
     #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D", sheet_name=1)
-    rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: convert_input(x))
+    rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: fo.convert_input2(x))
     rna_data["RNA_predicted_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: rna_base_pairing(x))
-    rna_data["RNA_predicted_structure"] = rna_data.apply(lambda x: encode_output(x.RNA_predicted_base_pairing, x.RNA_sequence),
+    rna_data["RNA_predicted_structure"] = rna_data.apply(lambda x: fo.encode_output(x.RNA_predicted_base_pairing, x.RNA_sequence),
                                                          axis=1)
     rna_data["RNA_distances"] = rna_data.apply(lambda x: calculate_distances(x.RNA_true_base_pairing, x.RNA_predicted_base_pairing),
                                                          axis=1)
@@ -154,5 +140,5 @@ if __name__ == '__main__':
         lambda x: calculate_RBP_score(1, x.RNA_distances),
         axis=1)
     print(rna_data)
-    rna_data.to_excel("results_nuss.xlsx", sheet_name="nussinov")
+    rna_data.to_excel("D:/Courses/CS5112_Algorithm/data/results_nuss.xlsx", sheet_name="nussinov")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

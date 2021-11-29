@@ -367,9 +367,9 @@ def traceback_z(i, j, v, w):
 
 if __name__ == '__main__':
     #use below line for testing with one row of data
-    rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D")
-    print(rna_data)
-    #rna_data = pd.read_excel("./RNAData.xlsx")
+    #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D")
+    #print(rna_data)
+    rna_data = pd.read_excel("D:/Courses/CS5112_Algorithm/data/RNAData_10-410.xlsx")
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: fo.convert_input(x))
     print('done rna true base pairing')
     rna_data["RNA_predicted_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: zuker(x))
@@ -386,5 +386,5 @@ if __name__ == '__main__':
        lambda x: sc.calculate_RBP_score(1, x.RNA_distances), axis=1)
     print('done rna rbp score')
     print(rna_data)
-    rna_data.to_excel("results_zuker2.xlsx", sheet_name="zuker")
+    rna_data.to_excel("D:/Courses/CS5112_Algorithm/data/results_zuker2.xlsx", sheet_name="zuker")
 
