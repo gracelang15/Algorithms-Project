@@ -127,7 +127,7 @@ def calculate_RBP_score(t, rna_distances):
         return m
 
 if __name__ == '__main__':
-    rna_data = pd.read_excel("D:/Courses/CS5112_Algorithm/data/RNAData_10-410.xlsx")
+    rna_data = pd.read_excel("D:/Courses/CS5112_Algorithm/data/RNAData_10-410-for_seqfold.xlsx")
     #use line below when wanting to do a quick test on one row of data
     #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D", sheet_name=1)
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: fo.convert_input2(x))
@@ -140,5 +140,5 @@ if __name__ == '__main__':
         lambda x: calculate_RBP_score(1, x.RNA_distances),
         axis=1)
     print(rna_data)
-    rna_data.to_excel("D:/Courses/CS5112_Algorithm/data/results_nuss.xlsx", sheet_name="nussinov")
+    rna_data.to_excel("D:/Courses/CS5112_Algorithm/data/results_nuss_full.xlsx", sheet_name="nussinov")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
