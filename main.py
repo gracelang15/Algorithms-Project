@@ -101,7 +101,7 @@ def encode_output(container, sequence):
     return rna_structure
 
 
-def convert_input2(rna_true_structure):
+def convert_input(rna_true_structure):
     save_element = []
     pair_index = []
     for i in range(len(rna_true_structure)):
