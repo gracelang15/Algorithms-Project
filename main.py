@@ -2,6 +2,7 @@ import numpy as numpy
 import pandas as pd
 import sys
 numpy.set_printoptions(threshold=sys.maxsize)
+import time
 
 #RNA_length = 15
 THRESHOLD = 3  # Avoid sharp turn.
@@ -76,6 +77,7 @@ def traceback(i, j, bp_m):
     container=[]
     length=j-1
     start=i
+
     def tracebackstep(i, j):
         while j>i and bp_m[i][j]==-1:
             j=j-1
@@ -89,6 +91,7 @@ def traceback(i, j, bp_m):
     tracebackstep(start,length)
     return container
 
+
 def encode_output(container, sequence):
     rna_structure = ["."] * len(sequence)
     for pair in container:
@@ -97,16 +100,22 @@ def encode_output(container, sequence):
     rna_structure = ''.join(rna_structure)
     return rna_structure
 
-def convert_input(rna_true_structure):
-    first_pair_element = []
-    second_pair_element = []
+
+def convert_input2(rna_true_structure):
+    save_element = []
+    pair_index = []
     for i in range(len(rna_true_structure)):
-        if rna_true_structure[i] == "(":
-            first_pair_element.append(i)
-        if rna_true_structure[-i-1] == ")":
-            second_pair_element.append(len(rna_true_structure)+(-1-i))
-    pair_index = list(zip(first_pair_element, second_pair_element))
+        if rna_true_structure[i] == ".":
+            continue
+        elif rna_true_structure[i] == "(":
+            save_element.append(i)
+        else:
+            # When you firstly meet a ")", pair it with the closest unpaired "(" on the left side of
+            # the current ")". Then remove this "(" from the list of the unpaired "(".
+            pair_index.append((save_element[len(save_element)-1], i))
+            save_element.pop()
     return pair_index
+
 
 def calculate_distances(rna_true_pairing, rna_predicted_pairing):
     s1 = []
@@ -127,6 +136,7 @@ def calculate_distances(rna_true_pairing, rna_predicted_pairing):
     delta = delta[::-1]
     return delta
 
+
 def calculate_RBP_score(t, rna_distances):
     #check if there are no cases where delta <= t*m:
     if rna_distances[-1] > (len(rna_distances)-1)*t:
@@ -141,18 +151,25 @@ def calculate_RBP_score(t, rna_distances):
         return m
 
 if __name__ == '__main__':
-    rna_data = pd.read_excel("./RNAData.xlsx")
+    rna_data = pd.read_excel("./RNADataSubset.xlsx")
+    print(rna_data)
     #use line below when wanting to do a quick test on one row of data
     #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D", sheet_name=1)
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: convert_input(x))
+    start = time.perf_counter()
     rna_data["RNA_predicted_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: rna_base_pairing(x))
+    end = time.perf_counter()
+    print("time_elapsed:", end - start)
+    print("starting scoring")
     rna_data["RNA_predicted_structure"] = rna_data.apply(lambda x: encode_output(x.RNA_predicted_base_pairing, x.RNA_sequence),
                                                          axis=1)
     rna_data["RNA_distances"] = rna_data.apply(lambda x: calculate_distances(x.RNA_true_base_pairing, x.RNA_predicted_base_pairing),
                                                          axis=1)
     rna_data["RBP_score"] = rna_data.apply(
-        lambda x: calculate_RBP_score(1, x.RNA_distances),
+        lambda x: calculate_RBP_score(0, x.RNA_distances),
         axis=1)
+    print("done!")
     print(rna_data)
-    rna_data.to_excel("results_nuss.xlsx", sheet_name="nussinov")
+
+    #rna_data.to_excel("results_nuss_BP.xlsx", sheet_name="nussinov")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

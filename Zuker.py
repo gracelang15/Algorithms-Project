@@ -4,6 +4,7 @@ import scoring as sc
 import formating as fo
 import sys
 import pandas as pd
+import time
 #from main import convert_input, rna_base_pairing, encode_output, calculate_distances, calculate_RBP_score
 
 
@@ -367,12 +368,14 @@ def traceback_z(i, j, v, w):
 
 if __name__ == '__main__':
     #use below line for testing with one row of data
-    rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D")
+    #rna_data = pd.read_excel("./RNAData2.xlsx", usecols="A:D")
+    rna_data = pd.read_excel("./data/RNADataSubset.xlsx")
     print(rna_data)
-    #rna_data = pd.read_excel("./RNAData.xlsx")
     rna_data["RNA_true_base_pairing"] = rna_data["RNA_structure"].apply(lambda x: fo.convert_input(x))
-    print('done rna true base pairing')
+    start = time.perf_counter()
     rna_data["RNA_predicted_base_pairing"] = rna_data["RNA_sequence"].apply(lambda x: zuker(x))
+    end = time.perf_counter()
+    print("time_elapsed:", end - start)
     print('done rna predict base pairing')
     rna_data["RNA_predicted_structure"] = rna_data.apply(
         lambda x: fo.encode_output(x.RNA_predicted_base_pairing, x.RNA_sequence),
@@ -383,8 +386,8 @@ if __name__ == '__main__':
         axis=1)
     print('done rna distances')
     rna_data["RBP_score"] = rna_data.apply(
-       lambda x: sc.calculate_RBP_score(1, x.RNA_distances), axis=1)
+       lambda x: sc.calculate_RBP_score(0, x.RNA_distances), axis=1)
     print('done rna rbp score')
     print(rna_data)
-    rna_data.to_excel("results_zuker2.xlsx", sheet_name="zuker")
+    rna_data.to_excel("results_zuker_BP.xlsx", sheet_name="zuker")
 
